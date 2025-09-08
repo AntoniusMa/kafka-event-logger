@@ -1,7 +1,9 @@
 package main
 
 import (
+	"context"
 	"log"
+	"os"
 	"kafka-logger/consumer"
 	"kafka-logger/producer"
 )
@@ -20,7 +22,8 @@ func main() {
 	c := consumer.NewConsumer(brokers, topic, "logger-group")
 	defer c.Close()
 
-	if err := consumer.ConsumeMessages(c); err != nil {
+	ctx := context.Background()
+	if err := consumer.ConsumeMessages(ctx, c, os.Stdout); err != nil {
 		log.Fatal(err)
 	}
 }

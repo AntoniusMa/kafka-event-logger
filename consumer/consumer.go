@@ -3,6 +3,7 @@ package consumer
 import (
 	"context"
 	"fmt"
+	"io"
 
 	"github.com/segmentio/kafka-go"
 )
@@ -23,12 +24,17 @@ func NewConsumer(brokers []string, topic, groupID string) MessageReader {
 	return reader
 }
 
-func ConsumeMessages(reader MessageReader) error {
+func ConsumeMessages(ctx context.Context, reader MessageReader, writer io.Writer) error {
 	for {
-		message, err := reader.ReadMessage(context.Background())
-		if err != nil {
-			return err
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+			message, err := reader.ReadMessage(ctx)
+			if err != nil {
+				return err
+			}
+			fmt.Fprintf(writer, "Key: %s, Value: %s\n", string(message.Key), string(message.Value))
 		}
-		fmt.Printf("Key: %s, Value: %s\n", string(message.Key), string(message.Value))
 	}
 }

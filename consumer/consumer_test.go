@@ -1,10 +1,13 @@
 package consumer
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"io"
 	"testing"
+	"time"
+
 	"github.com/segmentio/kafka-go"
 )
 
@@ -53,6 +56,7 @@ func TestConsumeMessages(t *testing.T) {
 		t.Parallel()
 		mockMessages := []kafka.Message{
 			{Key: []byte("key1"), Value: []byte("value1")},
+			{Key: []byte("key2"), Value: []byte("value2")},
 		}
 		
 		mockReader := &MockReader{
@@ -60,9 +64,18 @@ func TestConsumeMessages(t *testing.T) {
 			index:    0,
 		}
 		
-		err := ConsumeMessages(mockReader)
-		if err != io.EOF {
-			t.Errorf("Expected EOF error, got: %v", err)
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
+		defer cancel()
+		
+		var buf bytes.Buffer
+		err := ConsumeMessages(ctx, mockReader, &buf)
+		if err != io.EOF && err != context.DeadlineExceeded {
+			t.Errorf("Expected EOF or context timeout, got: %v", err)
+		}
+		
+		expectedOutput := "Key: key1, Value: value1\nKey: key2, Value: value2\n"
+		if buf.String() != expectedOutput {
+			t.Errorf("Expected output '%s', got: '%s'", expectedOutput, buf.String())
 		}
 	})
 	
@@ -73,12 +86,35 @@ func TestConsumeMessages(t *testing.T) {
 			errorMsg:    "test error",
 		}
 		
-		err := ConsumeMessages(mockReader)
+		ctx := context.Background()
+		var buf bytes.Buffer
+		err := ConsumeMessages(ctx, mockReader, &buf)
 		if err == nil {
 			t.Error("Expected error but got nil")
 		}
 		if err.Error() != "test error" {
 			t.Errorf("Expected 'test error', got: %v", err)
+		}
+	})
+	
+	t.Run("context_cancellation", func(t *testing.T) {
+		t.Parallel()
+		mockMessages := []kafka.Message{
+			{Key: []byte("key1"), Value: []byte("value1")},
+		}
+		
+		mockReader := &MockReader{
+			messages: mockMessages,
+			index:    0,
+		}
+		
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel() // Cancel immediately
+		
+		var buf bytes.Buffer
+		err := ConsumeMessages(ctx, mockReader, &buf)
+		if err != context.Canceled {
+			t.Errorf("Expected context.Canceled, got: %v", err)
 		}
 	})
 }
