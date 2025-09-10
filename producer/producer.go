@@ -2,8 +2,13 @@ package producer
 
 import (
 	"context"
+
 	"github.com/segmentio/kafka-go"
 )
+
+type MessageWriter interface {
+	WriteMessages(ctx context.Context, msgs ...kafka.Message) error
+}
 
 func NewProducer(brokers []string, topic string) *kafka.Writer {
 	return &kafka.Writer{
@@ -13,7 +18,7 @@ func NewProducer(brokers []string, topic string) *kafka.Writer {
 	}
 }
 
-func SendMessage(writer *kafka.Writer, key, value string) error {
+func SendMessage(writer MessageWriter, key, value string) error {
 	return writer.WriteMessages(context.Background(),
 		kafka.Message{
 			Key:   []byte(key),

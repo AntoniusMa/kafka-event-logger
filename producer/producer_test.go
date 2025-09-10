@@ -1,9 +1,21 @@
 package producer
 
 import (
+	"context"
 	"testing"
+
 	"github.com/segmentio/kafka-go"
 )
+
+type mockWriter struct {
+	messages []kafka.Message
+	err      error
+}
+
+func (m *mockWriter) WriteMessages(_ context.Context, msgs ...kafka.Message) error {
+	m.messages = append(m.messages, msgs...)
+	return m.err
+}
 
 func TestNewProducer(t *testing.T) {
 	brokers := []string{"localhost:9092"}
@@ -11,7 +23,7 @@ func TestNewProducer(t *testing.T) {
 
 	producer := NewProducer(brokers, topic)
 	defer producer.Close()
-	
+
 	if producer == nil {
 		t.Error("Producer should not be nil")
 	}
@@ -22,14 +34,26 @@ func TestNewProducer(t *testing.T) {
 }
 
 func TestSendMessage(t *testing.T) {
-	writer := &kafka.Writer{
-		Addr:  kafka.TCP("localhost:9092"),
-		Topic: "test-topic",
-	}
-	defer writer.Close()
+	writer := &mockWriter{}
 
-	err := SendMessage(writer, "test-key", "test-value")
+	testKey := "test-key"
+	testValue := "test-value"
+
+	err := SendMessage(writer, testKey, testValue)
+
 	if err != nil {
-		t.Logf("Send message failed (expected if Kafka not running): %v", err)
+		t.Fatalf("unexpected error %v", err)
+	}
+
+	if len(writer.messages) != 1 {
+		t.Fatalf("expected 1 message, got %d", len(writer.messages))
+	}
+
+	msg := writer.messages[0]
+	if string(msg.Key) != testKey {
+		t.Errorf("expected key '%s', got %s", testKey, msg.Key)
+	}
+	if string(msg.Value) != testValue {
+		t.Errorf("expected value '%s', got %s", testValue, msg.Value)
 	}
 }
