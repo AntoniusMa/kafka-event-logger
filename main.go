@@ -3,9 +3,10 @@ package main
 import (
 	"context"
 	"kafka-logger/consumer"
-	"kafka-logger/producer"
+	"kafka-logger/service"
 	"log"
 	"os"
+	"time"
 )
 
 func main() {
@@ -14,12 +15,31 @@ func main() {
 
 	initKafkaTopic(brokers, topic)
 
-	p := producer.NewProducer(brokers, topic)
-	defer p.Close()
+	logger := service.NewKafkaLogger(brokers, topic, "demo-service")
+	defer logger.Close()
 
-	if err := producer.SendMessage(p, "log-key", "Hello Kafka Logger!"); err != nil {
-		log.Fatal(err)
+	logger.Info("Application started", nil)
+
+	warnFields := map[string]any{
+		"user_id": 12345,
+		"action":  "login_attempt",
 	}
+	logger.Warn("This is a warning message", &warnFields)
+
+	errorFields := map[string]any{
+		"error":       "connection timeout",
+		"database":    "postgres",
+		"retry_count": 3,
+	}
+	logger.Error("Database connection failed", &errorFields)
+
+	debugFields := map[string]any{
+		"request_id": "req-123",
+		"endpoint":   "/api/users",
+	}
+	logger.Debug("Processing user request", &debugFields)
+
+	time.Sleep(time.Second)
 
 	c := consumer.NewConsumer(brokers, topic, "logger-group")
 	defer c.Close()

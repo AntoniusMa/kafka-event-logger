@@ -3,40 +3,13 @@ package consumer
 import (
 	"bytes"
 	"context"
-	"errors"
 	"io"
+	"kafka-logger/mocks"
 	"testing"
 	"time"
 
 	"github.com/segmentio/kafka-go"
 )
-
-// MockReader implements the MessageReader interface for testing
-type MockReader struct {
-	messages    []kafka.Message
-	index       int
-	shouldError bool
-	errorMsg    string
-}
-
-func (m *MockReader) ReadMessage(ctx context.Context) (kafka.Message, error) {
-	if m.shouldError {
-		if m.errorMsg != "" {
-			return kafka.Message{}, errors.New(m.errorMsg)
-		}
-		return kafka.Message{}, errors.New("mock error")
-	}
-	if m.index >= len(m.messages) {
-		return kafka.Message{}, io.EOF
-	}
-	msg := m.messages[m.index]
-	m.index++
-	return msg, nil
-}
-
-func (m *MockReader) Close() error {
-	return nil
-}
 
 func TestNewConsumer(t *testing.T) {
 	brokers := []string{"localhost:9092"}
@@ -59,9 +32,9 @@ func TestConsumeMessages(t *testing.T) {
 			{Key: []byte("key2"), Value: []byte("value2")},
 		}
 		
-		mockReader := &MockReader{
-			messages: mockMessages,
-			index:    0,
+		mockReader := &mocks.MockMessageReader{
+			Messages: mockMessages,
+			Index:    0,
 		}
 		
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
@@ -81,9 +54,9 @@ func TestConsumeMessages(t *testing.T) {
 	
 	t.Run("error", func(t *testing.T) {
 		t.Parallel()
-		mockReader := &MockReader{
-			shouldError: true,
-			errorMsg:    "test error",
+		mockReader := &mocks.MockMessageReader{
+			ShouldError: true,
+			ErrorMsg:    "test error",
 		}
 		
 		ctx := context.Background()
@@ -103,9 +76,9 @@ func TestConsumeMessages(t *testing.T) {
 			{Key: []byte("key1"), Value: []byte("value1")},
 		}
 		
-		mockReader := &MockReader{
-			messages: mockMessages,
-			index:    0,
+		mockReader := &mocks.MockMessageReader{
+			Messages: mockMessages,
+			Index:    0,
 		}
 		
 		ctx, cancel := context.WithCancel(context.Background())

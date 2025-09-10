@@ -2,3 +2,5 @@ CLAUDE.md
 claude
 .claude/*
 .vscode
+
+coverage.*
