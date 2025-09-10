@@ -97,7 +97,7 @@ func TestConsumeMessages(t *testing.T) {
 		}
 	})
 	
-	t.Run("context_cancellation", func(t *testing.T) {
+	t.Run("context cancellation", func(t *testing.T) {
 		t.Parallel()
 		mockMessages := []kafka.Message{
 			{Key: []byte("key1"), Value: []byte("value1")},

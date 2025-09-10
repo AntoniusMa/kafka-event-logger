@@ -2,15 +2,17 @@ package main
 
 import (
 	"context"
-	"log"
-	"os"
 	"kafka-logger/consumer"
 	"kafka-logger/producer"
+	"log"
+	"os"
 )
 
 func main() {
 	brokers := []string{"localhost:9092"}
 	topic := "logs-topic"
+
+	initKafkaTopic(brokers, topic)
 
 	p := producer.NewProducer(brokers, topic)
 	defer p.Close()
