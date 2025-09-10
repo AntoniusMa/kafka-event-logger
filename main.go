@@ -45,7 +45,7 @@ func main() {
 	defer c.Close()
 
 	ctx := context.Background()
-	if err := consumer.ConsumeMessages(ctx, c, os.Stdout); err != nil {
+	if err := consumer.ConsumeLogEvents(ctx, c, os.Stdout); err != nil {
 		log.Fatal(err)
 	}
 }
