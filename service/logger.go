@@ -43,7 +43,7 @@ func (kl *KafkaLogger) log(level LogLevel, message string, fields *map[string]an
 	if fields != nil {
 		f = *fields
 	}
-	
+
 	event := LogEvent{
 		Timestamp: time.Now().UTC(),
 		Level:     level,
