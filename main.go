@@ -3,9 +3,9 @@ package main
 import (
 	"context"
 	"kafka-logger/consumer"
+	"kafka-logger/filewriter"
 	"kafka-logger/service"
 	"log"
-	"os"
 	"time"
 )
 
@@ -44,8 +44,11 @@ func main() {
 	c := consumer.NewConsumer(brokers, topic, "logger-group")
 	defer c.Close()
 
+	logWriter := filewriter.NewLogFileWriter("./logs")
+	defer logWriter.Close()
+
 	ctx := context.Background()
-	if err := consumer.ConsumeLogEvents(ctx, c, os.Stdout); err != nil {
+	if err := consumer.ConsumeLogEventsToFiles(ctx, c, logWriter); err != nil {
 		log.Fatal(err)
 	}
 }
