@@ -22,7 +22,7 @@ func (d DefaultDialer) DialContext(ctx context.Context, network, address string)
 	return kafka.DialContext(ctx, network, address)
 }
 
-func createTopicWithDialer(dialer ConnDialer, brokers []string, topic string) error {
+func createTopicWithDialer(dialer ConnDialer, brokers []string, topic string, partitions int) error {
 	conn, err := dialer.DialContext(context.Background(), "tcp", brokers[0])
 	if err != nil {
 		return err
@@ -31,7 +31,7 @@ func createTopicWithDialer(dialer ConnDialer, brokers []string, topic string) er
 
 	topicConfig := kafka.TopicConfig{
 		Topic:             topic,
-		NumPartitions:     1,
+		NumPartitions:     partitions,
 		ReplicationFactor: 1,
 	}
 
@@ -44,12 +44,12 @@ func createTopicWithDialer(dialer ConnDialer, brokers []string, topic string) er
 	return nil
 }
 
-func createTopic(brokers []string, topic string) error {
-	return createTopicWithDialer(DefaultDialer{}, brokers, topic)
+func createTopic(brokers []string, topic string, partitions int) error {
+	return createTopicWithDialer(DefaultDialer{}, brokers, topic, partitions)
 }
 
-func initKafkaTopic(brokers []string, topic string) {
-	if err := createTopic(brokers, topic); err != nil {
+func initKafkaTopic(brokers []string, topic string, partitions int) {
+	if err := createTopic(brokers, topic, partitions); err != nil {
 		log.Printf("Warning: Failed to create topic '%s': %v", topic, err)
 	}
 }

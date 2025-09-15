@@ -14,7 +14,7 @@ func main() {
 	brokers := []string{"localhost:9092"}
 	topic := "logs-topic"
 
-	initKafkaTopic(brokers, topic)
+	initKafkaTopic(brokers, topic, 3)
 
 	logger := service.NewKafkaLogger(brokers, topic, "demo-service")
 	defer logger.Close()

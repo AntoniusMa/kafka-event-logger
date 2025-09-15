@@ -58,8 +58,9 @@ func TestCreateTopic(t *testing.T) {
 
 		brokers := []string{"localhost:9092"}
 		topic := "test-topic"
+		numPartitions := 2
 
-		err := createTopicWithDialer(mockDialer, brokers, topic)
+		err := createTopicWithDialer(mockDialer, brokers, topic, numPartitions)
 
 		if err != nil {
 			t.Errorf("Expected no error, got: %v", err)
@@ -69,7 +70,7 @@ func TestCreateTopic(t *testing.T) {
 			t.Errorf("Expected topic '%s', got '%s'", topic, createdTopic.Topic)
 		}
 
-		if createdTopic.NumPartitions != 1 {
+		if createdTopic.NumPartitions != numPartitions {
 			t.Errorf("Expected 1 partition, got %d", createdTopic.NumPartitions)
 		}
 
@@ -89,7 +90,7 @@ func TestCreateTopic(t *testing.T) {
 		brokers := []string{"localhost:9092"}
 		topic := "test-topic"
 
-		err := createTopicWithDialer(mockDialer, brokers, topic)
+		err := createTopicWithDialer(mockDialer, brokers, topic, 1)
 
 		if err != expectedErr {
 			t.Errorf("Expected error '%v', got '%v'", expectedErr, err)
@@ -113,7 +114,7 @@ func TestCreateTopic(t *testing.T) {
 		brokers := []string{"localhost:9092"}
 		topic := "test-topic"
 
-		err := createTopicWithDialer(mockDialer, brokers, topic)
+		err := createTopicWithDialer(mockDialer, brokers, topic, 1)
 
 		if err != expectedErr {
 			t.Errorf("Expected error '%v', got '%v'", expectedErr, err)
@@ -138,7 +139,7 @@ func TestCreateTopic(t *testing.T) {
 		brokers := []string{"localhost:9092"}
 		topic := "test-topic"
 
-		_ = createTopicWithDialer(mockDialer, brokers, topic)
+		_ = createTopicWithDialer(mockDialer, brokers, topic, 1)
 
 		if !closeCalled {
 			t.Error("Expected connection to be closed")
