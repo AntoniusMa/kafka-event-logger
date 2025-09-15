@@ -6,6 +6,7 @@ import (
 	"kafka-logger/filewriter"
 	"kafka-logger/service"
 	"log"
+	"sync"
 	"time"
 )
 
@@ -41,14 +42,27 @@ func main() {
 
 	time.Sleep(time.Second)
 
-	c := consumer.NewConsumer(brokers, topic, "logger-group")
-	defer c.Close()
-
 	logWriter := filewriter.NewLogFileWriter("./logs")
 	defer logWriter.Close()
 
 	ctx := context.Background()
-	if err := consumer.ConsumeLogEventsToFiles(ctx, c, logWriter); err != nil {
-		log.Fatal(err)
+	numConsumers := 3
+	var wg sync.WaitGroup
+
+	for i := range numConsumers {
+		wg.Add(1)
+		go func(consumerID int) {
+			defer wg.Done()
+
+			c := consumer.NewConsumer(brokers, topic, "logger-group")
+			defer c.Close()
+
+			log.Printf("Starting consumer %d", consumerID)
+			if err := consumer.ConsumeLogEventsToFiles(ctx, c, logWriter); err != nil {
+				log.Printf("Consumer %d error: %v", consumerID, err)
+			}
+		}(i)
 	}
+
+	wg.Wait()
 }
