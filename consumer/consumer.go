@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"kafka-logger/filewriter"
 	"kafka-logger/service"
 	"time"
 
@@ -67,6 +68,43 @@ func ConsumeLogEvents(ctx context.Context, reader MessageReader, writer io.Write
 				fmt.Fprintf(writer, "%s [%s] %s: %s%s\n", timestamp, logEvent.Level, logEvent.Service, logEvent.Message, fieldsStr)
 			} else {
 				fmt.Fprintf(writer, "%s [%s] %s: %s\n", timestamp, logEvent.Level, logEvent.Service, logEvent.Message)
+			}
+		}
+	}
+}
+
+func ConsumeLogEventsToFiles(ctx context.Context, reader MessageReader, logWriter filewriter.LogWriter) error {
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+			message, err := reader.ReadMessage(ctx)
+			if err != nil {
+				return err
+			}
+
+			var logEvent service.LogEvent
+			if err := json.Unmarshal(message.Value, &logEvent); err != nil {
+				logWriter.WriteLog("ERROR", fmt.Sprintf("Error parsing log event: %v, Raw message: %s", err, string(message.Value)))
+				continue
+			}
+
+			timestamp := logEvent.Timestamp.Format(time.RFC3339)
+
+			var logMessage string
+			if len(logEvent.Fields) > 0 {
+				fieldsStr := ""
+				for key, value := range logEvent.Fields {
+					fieldsStr += fmt.Sprintf(" %s=%v", key, value)
+				}
+				logMessage = fmt.Sprintf("%s [%s] %s: %s%s", timestamp, logEvent.Level, logEvent.Service, logEvent.Message, fieldsStr)
+			} else {
+				logMessage = fmt.Sprintf("%s [%s] %s: %s", timestamp, logEvent.Level, logEvent.Service, logEvent.Message)
+			}
+
+			if err := logWriter.WriteLog(string(logEvent.Level), logMessage); err != nil {
+				return fmt.Errorf("failed to write log: %w", err)
 			}
 		}
 	}

@@ -306,8 +306,8 @@ func TestConsumeLogEvents(t *testing.T) {
 		infoTimestampStr := infoTimestamp.Format(time.RFC3339)
 		errorTimestampStr := errorTimestamp.Format(time.RFC3339)
 		expectedErrorCodeStr := fmt.Sprintf("error_code=%d", errorCode)
-		
-		expectedCompleteOutput := fmt.Sprintf("%s [%s] %s: %s\n%s [%s] %s: %s %s\n", 
+
+		expectedCompleteOutput := fmt.Sprintf("%s [%s] %s: %s\n%s [%s] %s: %s %s\n",
 			infoTimestampStr, infoLevel, testServiceKey, infoMessage,
 			errorTimestampStr, errorLevel, testServiceKey, errorMessage, expectedErrorCodeStr)
 
@@ -369,6 +369,181 @@ func TestConsumeLogEvents(t *testing.T) {
 
 		var buf bytes.Buffer
 		err = ConsumeLogEvents(ctx, mockReader, &buf)
+		if err != context.Canceled {
+			t.Errorf("Expected context.Canceled, got: %v", err)
+		}
+	})
+}
+
+func TestConsumeLogEventsToFiles(t *testing.T) {
+	t.Parallel()
+
+	t.Run("Success with fields", func(t *testing.T) {
+		t.Parallel()
+		mockTimestamp := time.Date(2024, 1, 15, 10, 30, 45, 0, time.UTC)
+		testLogLevel := service.INFO
+		testMessage := "Test message"
+		testServiceKey := "test-service"
+		testUserID := 123
+		testAction := "login"
+
+		logEvent := service.LogEvent{
+			Timestamp: mockTimestamp,
+			Level:     testLogLevel,
+			Message:   testMessage,
+			Service:   testServiceKey,
+			Fields: map[string]any{
+				"user_id": testUserID,
+				"action":  testAction,
+			},
+		}
+
+		jsonData, err := json.Marshal(logEvent)
+		if err != nil {
+			t.Fatalf("Failed to marshal log event: %v", err)
+		}
+
+		mockMessages := []kafka.Message{
+			{Key: []byte(testServiceKey), Value: jsonData},
+		}
+
+		mockReader := &mocks.MockMessageReader{
+			Messages: mockMessages,
+			Index:    0,
+		}
+
+		mockWriter := mocks.NewMockLogFileWriter()
+
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
+		defer cancel()
+
+		err = ConsumeLogEventsToFiles(ctx, mockReader, mockWriter)
+		if err != io.EOF && err != context.DeadlineExceeded {
+			t.Errorf("Expected EOF or context timeout, got: %v", err)
+		}
+
+		// Verify the log was written to the correct level
+		logs := mockWriter.Logs[string(testLogLevel)]
+		if len(logs) != 1 {
+			t.Fatalf("Expected 1 log entry for level %s, got %d", testLogLevel, len(logs))
+		}
+
+		logEntry := logs[0]
+		assertBasicLogOutput(t, logEntry, mockTimestamp, testLogLevel, testServiceKey, testMessage)
+
+		if !strings.Contains(logEntry, fmt.Sprintf("user_id=%d", testUserID)) {
+			t.Errorf("Expected user_id field in log entry, got: %s", logEntry)
+		}
+		if !strings.Contains(logEntry, fmt.Sprintf("action=%s", testAction)) {
+			t.Errorf("Expected action field in log entry, got: %s", logEntry)
+		}
+	})
+
+	t.Run("Success without fields", func(t *testing.T) {
+		t.Parallel()
+		mockTimestamp := time.Date(2024, 1, 15, 10, 30, 45, 0, time.UTC)
+		testLogLevel := service.ERROR
+		testMessage := "Error message"
+		testServiceKey := "error-service"
+
+		logEvent := service.LogEvent{
+			Timestamp: mockTimestamp,
+			Level:     testLogLevel,
+			Message:   testMessage,
+			Service:   testServiceKey,
+			Fields:    nil,
+		}
+
+		jsonData, err := json.Marshal(logEvent)
+		if err != nil {
+			t.Fatalf("Failed to marshal log event: %v", err)
+		}
+
+		mockMessages := []kafka.Message{
+			{Key: []byte(testServiceKey), Value: jsonData},
+		}
+
+		mockReader := &mocks.MockMessageReader{
+			Messages: mockMessages,
+			Index:    0,
+		}
+
+		mockWriter := mocks.NewMockLogFileWriter()
+
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
+		defer cancel()
+
+		err = ConsumeLogEventsToFiles(ctx, mockReader, mockWriter)
+		if err != io.EOF && err != context.DeadlineExceeded {
+			t.Errorf("Expected EOF or context timeout, got: %v", err)
+		}
+
+		// Verify the log was written to the ERROR level
+		logs := mockWriter.Logs[string(testLogLevel)]
+		if len(logs) != 1 {
+			t.Fatalf("Expected 1 log entry for level %s, got %d", testLogLevel, len(logs))
+		}
+
+		logEntry := logs[0]
+		assertBasicLogOutput(t, logEntry, mockTimestamp, testLogLevel, testServiceKey, testMessage)
+	})
+
+	t.Run("Invalid JSON", func(t *testing.T) {
+		t.Parallel()
+		testServiceKey := "test-service"
+		invalidJSON := "invalid json"
+
+		mockMessages := []kafka.Message{
+			{Key: []byte(testServiceKey), Value: []byte(invalidJSON)},
+		}
+
+		mockReader := &mocks.MockMessageReader{
+			Messages: mockMessages,
+			Index:    0,
+		}
+
+		mockWriter := mocks.NewMockLogFileWriter()
+
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
+		defer cancel()
+
+		err := ConsumeLogEventsToFiles(ctx, mockReader, mockWriter)
+		if err != io.EOF && err != context.DeadlineExceeded {
+			t.Errorf("Expected EOF or context timeout, got: %v", err)
+		}
+
+		// Verify the error was written to ERROR level
+		errorLogs := mockWriter.Logs["ERROR"]
+		if len(errorLogs) != 1 {
+			t.Fatalf("Expected 1 error log entry, got %d", len(errorLogs))
+		}
+
+		errorEntry := errorLogs[0]
+		if !strings.Contains(errorEntry, "Error parsing log event") {
+			t.Errorf("Expected parsing error message in log entry, got: %s", errorEntry)
+		}
+		if !strings.Contains(errorEntry, invalidJSON) {
+			t.Errorf("Expected raw message in log entry, got: %s", errorEntry)
+		}
+	})
+
+	t.Run("Context cancellation", func(t *testing.T) {
+		t.Parallel()
+		mockMessages := []kafka.Message{
+			{Key: []byte("test"), Value: []byte(`{"timestamp":"2024-01-15T10:30:45Z","level":"INFO","message":"test","service":"test"}`)},
+		}
+
+		mockReader := &mocks.MockMessageReader{
+			Messages: mockMessages,
+			Index:    0,
+		}
+
+		mockWriter := mocks.NewMockLogFileWriter()
+
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel() // Cancel immediately
+
+		err := ConsumeLogEventsToFiles(ctx, mockReader, mockWriter)
 		if err != context.Canceled {
 			t.Errorf("Expected context.Canceled, got: %v", err)
 		}

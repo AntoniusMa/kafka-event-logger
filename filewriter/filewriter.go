@@ -10,6 +10,11 @@ import (
 
 const dateFormat = "2006-01-02"
 
+type LogWriter interface {
+	WriteLog(level, message string) error
+	Close() error
+}
+
 type fileInfo struct {
 	file  *os.File
 	mutex sync.Mutex
