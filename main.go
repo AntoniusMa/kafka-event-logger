@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"kafka-logger/config"
 	"kafka-logger/consumer"
 	"kafka-logger/filewriter"
 	"kafka-logger/service"
@@ -14,12 +15,16 @@ import (
 )
 
 func main() {
-	brokers := []string{"localhost:9092"}
-	topic := "logs-topic"
+	// Load configuration
+	cfg, err := config.LoadConfig("config.yaml")
+	if err != nil {
+		log.Printf("Failed to load config, using defaults: %v", err)
+		cfg = config.DefaultConfig()
+	}
 
-	initKafkaTopic(brokers, topic, 3)
+	initKafkaTopic(cfg.Kafka.Brokers, cfg.Kafka.Topic, cfg.Kafka.Partitions)
 
-	logger := service.NewKafkaLogger(brokers, topic, "demo-service")
+	logger := service.NewKafkaLogger(cfg.Kafka.Brokers, cfg.Kafka.Topic, cfg.Logging.ServiceName)
 	defer logger.Close()
 
 	logger.Info("Application started", nil)
@@ -45,7 +50,7 @@ func main() {
 
 	time.Sleep(time.Second)
 
-	logWriter := filewriter.NewLogFileWriter("./logs")
+	logWriter := filewriter.NewLogFileWriter(cfg.Logging.FilePath)
 	defer logWriter.Close()
 
 	// Setup graceful shutdown
@@ -62,7 +67,7 @@ func main() {
 		cancel()
 	}()
 
-	numConsumers := 3
+	numConsumers := cfg.Consumer.NumConsumers
 	var wg sync.WaitGroup
 
 	for i := range numConsumers {
@@ -70,7 +75,7 @@ func main() {
 		go func(consumerID int) {
 			defer wg.Done()
 
-			c := consumer.NewConsumer(brokers, topic, "logger-group")
+			c := consumer.NewConsumer(cfg.Kafka.Brokers, cfg.Kafka.Topic, cfg.Consumer.GroupName)
 			defer c.Close()
 
 			log.Printf("Starting consumer %d", consumerID)

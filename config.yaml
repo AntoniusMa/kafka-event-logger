@@ -1,0 +1,13 @@
+kafka:
+  brokers:
+    - "localhost:9092"
+  topic: "logs-topic"
+  partitions: 3
+
+logging:
+  service_name: "demo-service"
+  file_path: "./logs"
+
+consumer:
+  group_name: "logger-group"
+  num_consumers: 3
