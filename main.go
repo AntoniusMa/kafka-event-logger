@@ -6,7 +6,10 @@ import (
 	"kafka-logger/filewriter"
 	"kafka-logger/service"
 	"log"
+	"os"
+	"os/signal"
 	"sync"
+	"syscall"
 	"time"
 )
 
@@ -45,7 +48,20 @@ func main() {
 	logWriter := filewriter.NewLogFileWriter("./logs")
 	defer logWriter.Close()
 
-	ctx := context.Background()
+	// Setup graceful shutdown
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// Handle shutdown signals
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+
+	go func() {
+		sig := <-sigChan
+		log.Printf("Received signal %v, initiating graceful shutdown...", sig)
+		cancel()
+	}()
+
 	numConsumers := 3
 	var wg sync.WaitGroup
 
@@ -59,10 +75,15 @@ func main() {
 
 			log.Printf("Starting consumer %d", consumerID)
 			if err := consumer.ConsumeLogEventsToFiles(ctx, c, logWriter); err != nil {
-				log.Printf("Consumer %d error: %v", consumerID, err)
+				if err != context.Canceled {
+					log.Printf("Consumer %d error: %v", consumerID, err)
+				} else {
+					log.Printf("Consumer %d shutdown gracefully", consumerID)
+				}
 			}
 		}(i)
 	}
 
 	wg.Wait()
+	log.Println("All consumers stopped, application shutdown complete")
 }
