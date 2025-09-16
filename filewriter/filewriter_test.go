@@ -144,7 +144,6 @@ func TestClose(t *testing.T) {
 	if err != nil {
 		t.Errorf("Close returned an error: %v", err)
 	}
-
 	// Verify files map is reset
 	if len(writer.files) != 0 {
 		t.Errorf("Expected files map to be empty after close, got %d entries", len(writer.files))
@@ -197,12 +196,12 @@ func TestConcurrentWrites(t *testing.T) {
 	// Verify each line is complete and not corrupted
 	messagePattern := regexp.MustCompile(`^Goroutine-\d{2}-Message-\d{2}$`)
 	messageMap := make(map[string]bool)
-	
+
 	for _, line := range lines {
 		if !messagePattern.MatchString(line) {
 			t.Errorf("Corrupted or incomplete line found: '%s'", line)
 		}
-		
+
 		if messageMap[line] {
 			t.Errorf("Duplicate message found: '%s'", line)
 		}

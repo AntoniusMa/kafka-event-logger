@@ -8,15 +8,15 @@ import (
 )
 
 type Config struct {
-	Kafka    KafkaConfig `yaml:"kafka"`
-	Logging  LogConfig   `yaml:"logging"`
+	Kafka    KafkaConfig    `yaml:"kafka"`
+	Logging  LogConfig      `yaml:"logging"`
 	Consumer ConsumerConfig `yaml:"consumer"`
 }
 
 type KafkaConfig struct {
-	Brokers      []string `yaml:"brokers"`
-	Topic        string   `yaml:"topic"`
-	Partitions   int      `yaml:"partitions"`
+	Brokers    []string `yaml:"brokers"`
+	Topic      string   `yaml:"topic"`
+	Partitions int      `yaml:"partitions"`
 }
 
 type LogConfig struct {

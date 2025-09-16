@@ -25,7 +25,7 @@ func TestNewProducer(t *testing.T) {
 	defer producer.Close()
 
 	if producer == nil {
-		t.Error("Producer should not be nil")
+		t.Fatal("Producer should not be nil")
 	}
 
 	if producer.Topic != topic {

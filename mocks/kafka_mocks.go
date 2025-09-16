@@ -25,7 +25,7 @@ func (m *MockMessageWriter) WriteMessages(ctx context.Context, msgs ...kafka.Mes
 // MockClosableWriter extends MockMessageWriter to implement Close for testing Close functionality
 type MockClosableWriter struct {
 	*MockMessageWriter
-	CloseFunc func() error
+	CloseFunc   func() error
 	CloseCalled bool
 }
 

@@ -1,4 +1,5 @@
-version: "1"
+version: "2"
+
 run:
   timeout: 5m
   tests: true
@@ -6,30 +7,23 @@ run:
 linters:
   enable:
     - govet
-    - gofmt
-    - goimports
-    - errcheck
     - ineffassign
     - staticcheck
-    - gosimple
     - unused
-    - typecheck
-    - structcheck
-    - deadcode
-    - varcheck
     - misspell
     - gocritic
-
   disable:
+    - errcheck
     - depguard # sometimes too restrictive for small projects
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
 
 issues:
   max-issues-per-linter: 50
   max-same-issues: 3
-  new: false
-  fix: false
-  uniq-by-line: true
-  whole-files: true
 
 output:
   formats:

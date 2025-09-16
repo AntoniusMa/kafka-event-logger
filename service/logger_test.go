@@ -172,7 +172,7 @@ func TestNewKafkaLogger(t *testing.T) {
 	logger := NewKafkaLogger(brokers, topic, serviceName)
 
 	if logger == nil {
-		t.Error("Expected logger to be created, got nil")
+		t.Fatal("Expected logger to be created, got nil")
 	}
 
 	if logger.service != serviceName {

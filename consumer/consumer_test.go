@@ -377,7 +377,6 @@ func TestConsumeLogEvents(t *testing.T) {
 
 func TestConsumeLogEventsToFiles(t *testing.T) {
 	t.Parallel()
-
 	t.Run("Success with fields", func(t *testing.T) {
 		t.Parallel()
 		mockTimestamp := time.Date(2024, 1, 15, 10, 30, 45, 0, time.UTC)
