@@ -187,8 +187,7 @@ func TestNewKafkaLogger(t *testing.T) {
 func TestClose(t *testing.T) {
 	t.Run("With closer function", func(t *testing.T) {
 		var closeCalledFromCloseFunc = false
-		mockWriter := &mocks.MockClosableWriter{
-			MockMessageWriter: &mocks.MockMessageWriter{},
+		mockWriter := &mocks.MockMessageWriter{
 			CloseFunc: func() error {
 				closeCalledFromCloseFunc = true
 				return nil

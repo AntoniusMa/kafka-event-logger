@@ -82,8 +82,5 @@ func (kl *KafkaLogger) Debug(message string, fields *map[string]any) error {
 }
 
 func (kl *KafkaLogger) Close() error {
-	if closer, ok := kl.writer.(interface{ Close() error }); ok {
-		return closer.Close()
-	}
-	return nil
+	return kl.writer.Close()
 }

@@ -1,21 +1,9 @@
 package producer
 
 import (
-	"context"
+	"kafka-logger/mocks"
 	"testing"
-
-	"github.com/segmentio/kafka-go"
 )
-
-type mockWriter struct {
-	messages []kafka.Message
-	err      error
-}
-
-func (m *mockWriter) WriteMessages(_ context.Context, msgs ...kafka.Message) error {
-	m.messages = append(m.messages, msgs...)
-	return m.err
-}
 
 func TestNewProducer(t *testing.T) {
 	brokers := []string{"localhost:9092"}
@@ -34,7 +22,7 @@ func TestNewProducer(t *testing.T) {
 }
 
 func TestSendMessage(t *testing.T) {
-	writer := &mockWriter{}
+	writer := &mocks.MockMessageWriter{}
 
 	testKey := "test-key"
 	testValue := "test-value"
@@ -45,11 +33,11 @@ func TestSendMessage(t *testing.T) {
 		t.Fatalf("unexpected error %v", err)
 	}
 
-	if len(writer.messages) != 1 {
-		t.Fatalf("expected 1 message, got %d", len(writer.messages))
+	if len(writer.Messages) != 1 {
+		t.Fatalf("expected 1 message, got %d", len(writer.Messages))
 	}
 
-	msg := writer.messages[0]
+	msg := writer.Messages[0]
 	if string(msg.Key) != testKey {
 		t.Errorf("expected key '%s', got %s", testKey, msg.Key)
 	}

@@ -8,10 +8,12 @@ import (
 	"github.com/segmentio/kafka-go"
 )
 
-// MockMessageWriter implements the producer.MessageWriter interface for testing
+// MockMessageWriter extends MockMessageWriter to implement Close for testing Close functionality
 type MockMessageWriter struct {
-	Messages []kafka.Message
-	WriteErr error
+	Messages    []kafka.Message
+	WriteErr    error
+	CloseFunc   func() error
+	CloseCalled bool
 }
 
 func (m *MockMessageWriter) WriteMessages(ctx context.Context, msgs ...kafka.Message) error {
@@ -22,14 +24,7 @@ func (m *MockMessageWriter) WriteMessages(ctx context.Context, msgs ...kafka.Mes
 	return nil
 }
 
-// MockClosableWriter extends MockMessageWriter to implement Close for testing Close functionality
-type MockClosableWriter struct {
-	*MockMessageWriter
-	CloseFunc   func() error
-	CloseCalled bool
-}
-
-func (m *MockClosableWriter) Close() error {
+func (m *MockMessageWriter) Close() error {
 	m.CloseCalled = true
 	if m.CloseFunc != nil {
 		return m.CloseFunc()
